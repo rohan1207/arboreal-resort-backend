@@ -124,15 +124,18 @@ export const createBooking = async (req, res) => {
     // Build URL manually to ensure BookingData is correctly encoded
     const apiUrl = `${EZEE_API_BASE_URL}?request_type=InsertBooking&HotelCode=${HOTEL_CODE}&APIKey=${API_KEY}&BookingData=${encodedBookingData}&LANGUAGE=en`;
     
-    console.log('Creating booking with Ezee API...');
+    console.log('=== CREATING BOOKING WITH EZEE API ===');
     console.log('Booking Data:', JSON.stringify(bookingData, null, 2));
+    console.log('API URL (first 200 chars):', apiUrl.substring(0, 200) + '...');
 
     // Make request to Ezee InsertBooking API
     const response = await axios.get(apiUrl, {
       timeout: 30000 // 30 second timeout
     });
 
-    console.log('Ezee API Response:', JSON.stringify(response.data, null, 2));
+    console.log('=== EZEE API RESPONSE ===');
+    console.log('Response Status:', response.status);
+    console.log('Response Data:', JSON.stringify(response.data, null, 2));
 
     // Check if booking was successful
     if (response.data.ReservationNo) {
@@ -166,10 +169,25 @@ export const createBooking = async (req, res) => {
     } else if (Array.isArray(response.data) && response.data.length > 0) {
       // Handle error array format
       console.error('Ezee API returned array (likely error):', response.data);
+      console.error('First error item:', JSON.stringify(response.data[0], null, 2));
+      
+      // Try to extract meaningful error message from array
+      const firstError = response.data[0];
+      let errorMessage = 'Booking failed';
+      
+      if (firstError.Error_Message) {
+        errorMessage = firstError.Error_Message;
+      } else if (firstError.message) {
+        errorMessage = firstError.message;
+      } else if (typeof firstError === 'string') {
+        errorMessage = firstError;
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'Booking failed - no reservation number received',
-        error: response.data
+        message: errorMessage,
+        error: response.data,
+        errorDetails: firstError
       });
     } else {
       console.error('Ezee API - Unexpected response format:', response.data);

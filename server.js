@@ -12,6 +12,7 @@ import videoRoutes from './routes/videoRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import heroImageRoutes from './routes/heroImageRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import razorpayRoutes from './routes/razorpayRoutes.js';
 
 // Load env vars
 dotenv.config();
@@ -27,7 +28,7 @@ const corsOptions = {
     'http://localhost:5174', // Local dev ports
     'http://localhost:5173',
     'http://localhost:5175',
-    process.env.CLIENT_URL || 'https://arboreal-resort-frontend.onrender.com',
+    process.env.CLIENT_URL || 'https://arboreal-new.onrender.com',
     'https://admin.aagaurstudio.com', 
     'https://www.aagaurstudio.com','https://aagaurstudio.com',// Main frontend on Render
     'https://aagaur-admin.onrender.com', // Admin panel on Render
@@ -68,6 +69,7 @@ app.use('/api/careers', careerRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/booking', bookingRoutes);
+app.use('/api/payment', razorpayRoutes);
 
 
 
