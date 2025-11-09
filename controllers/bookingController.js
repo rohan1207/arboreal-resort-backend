@@ -117,25 +117,40 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Build the BookingData JSON string and MANUALLY encode it to avoid encoding quirks
+    // Build the BookingData JSON string
     const bookingDataJson = JSON.stringify(bookingData);
-    const encodedBookingData = encodeURIComponent(bookingDataJson);
 
-    // Build URL manually to ensure BookingData is correctly encoded
-    const apiUrl = `${EZEE_API_BASE_URL}?request_type=InsertBooking&HotelCode=${HOTEL_CODE}&APIKey=${API_KEY}&BookingData=${encodedBookingData}&LANGUAGE=en`;
+    // Create form data for POST request (CORRECT METHOD as per testing)
+    const formData = new URLSearchParams();
+    formData.append('request_type', 'InsertBooking');
+    formData.append('HotelCode', HOTEL_CODE);
+    formData.append('APIKey', API_KEY);
+    formData.append('BookingData', bookingDataJson);
     
+    console.log('\n========================================');
     console.log('=== CREATING BOOKING WITH EZEE API ===');
-    console.log('Booking Data:', JSON.stringify(bookingData, null, 2));
-    console.log('API URL (first 200 chars):', apiUrl.substring(0, 200) + '...');
+    console.log('========================================');
+    console.log('[Booking Data Received]:', JSON.stringify(bookingData, null, 2));
+    console.log('\n[Form Data Being Sent]:');
+    console.log(formData.toString().substring(0, 500) + '...\n');
+    console.log('========================================\n');
 
-    // Make request to Ezee InsertBooking API
-    const response = await axios.get(apiUrl, {
-      timeout: 30000 // 30 second timeout
+    // Make POST request to Ezee InsertBooking API with form data
+    const response = await axios.post(EZEE_API_BASE_URL, formData, {
+      timeout: 30000, // 30 second timeout
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     });
 
+    console.log('\n========================================');
     console.log('=== EZEE API RESPONSE ===');
-    console.log('Response Status:', response.status);
-    console.log('Response Data:', JSON.stringify(response.data, null, 2));
+    console.log('========================================');
+    console.log('[Response Status]:', response.status);
+    console.log('[Response Headers]:', JSON.stringify(response.headers, null, 2));
+    console.log('[Response Data]:');
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log('========================================\n');
 
     // Check if booking was successful
     if (response.data.ReservationNo) {
@@ -148,33 +163,30 @@ export const createBooking = async (req, res) => {
           InventoryMode: response.data.Inventory_Mode || response.data.InventoryMode
         }
       });
-    } else if (response.data.Error_Details) {
-      // Handle Ezee API error responses with Error_Details
-      console.error('Ezee API Error Details:', response.data.Error_Details);
-      return res.status(400).json({
-        success: false,
-        message: response.data.Error_Details.Error_Message || 'Booking failed',
-        errorCode: response.data.Error_Details.Error_Code,
-        errorDetails: response.data.Error_Details
-      });
-    } else if (response.data.error || response.data.Error) {
-      // Handle other error formats
-      const errorMsg = response.data.error || response.data.Error || 'Unknown error from booking system';
-      console.error('Ezee API Error:', errorMsg);
-      return res.status(400).json({
-        success: false,
-        message: 'Booking failed',
-        error: response.data.error || response.data.Error
-      });
-    } else if (Array.isArray(response.data) && response.data.length > 0) {
-      // Handle error array format
-      console.error('Ezee API returned array (likely error):', response.data);
-      console.error('First error item:', JSON.stringify(response.data[0], null, 2));
-      
-      // Try to extract meaningful error message from array
+    }
+    
+    // Handle error array format (most common from eZee API)
+    if (Array.isArray(response.data) && response.data.length > 0) {
       const firstError = response.data[0];
-      let errorMessage = 'Booking failed';
+      console.error('\n[Ezee API Error - Array Format]');
+      console.error('Full error array:', JSON.stringify(response.data, null, 2));
       
+      // Check for nested "Error Details" object
+      if (firstError["Error Details"]) {
+        const errorDetails = firstError["Error Details"];
+        console.error('Error Code:', errorDetails.Error_Code);
+        console.error('Error Message:', errorDetails.Error_Message);
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Booking failed',
+          error: response.data,
+          errorDetails: errorDetails
+        });
+      }
+      
+      // Fallback for other array formats
+      let errorMessage = 'Booking failed';
       if (firstError.Error_Message) {
         errorMessage = firstError.Error_Message;
       } else if (firstError.message) {
@@ -189,14 +201,43 @@ export const createBooking = async (req, res) => {
         error: response.data,
         errorDetails: firstError
       });
-    } else {
-      console.error('Ezee API - Unexpected response format:', response.data);
+    }
+    
+    // Handle Error_Details object format
+    if (response.data.Error_Details || response.data["Error Details"]) {
+      const errorDetails = response.data.Error_Details || response.data["Error Details"];
+      console.error('\n[Ezee API Error - Object Format]');
+      console.error('Error Details:', JSON.stringify(errorDetails, null, 2));
+      
       return res.status(400).json({
         success: false,
-        message: 'Booking failed - unexpected response format',
-        error: response.data
+        message: errorDetails.Error_Message || 'Booking failed',
+        errorCode: errorDetails.Error_Code,
+        errorDetails: errorDetails
       });
     }
+    
+    // Handle other error formats
+    if (response.data.error || response.data.Error) {
+      const errorMsg = response.data.error || response.data.Error || 'Unknown error from booking system';
+      console.error('\n[Ezee API Error - String Format]:', errorMsg);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Booking failed',
+        error: response.data.error || response.data.Error
+      });
+    }
+    
+    // Unknown format
+    console.error('\n[Ezee API - Unexpected Response Format]');
+    console.error('Response data:', JSON.stringify(response.data, null, 2));
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Booking failed - unexpected response format',
+      error: response.data
+    });
 
   } catch (error) {
     console.error('Error creating booking:', error.response?.data || error.message);
@@ -339,6 +380,98 @@ export const calculateExtraCharge = async (req, res) => {
 };
 
 /**
+ * Process booking after payment (Confirm or Cancel)
+ * POST /api/booking/process
+ * Body: { ReservationNo, Action: "ConfirmBooking" | "CancelBooking", InventoryMode, ErrorText }
+ */
+export const processBooking = async (req, res) => {
+  try {
+    const { ReservationNo, Action, InventoryMode, ErrorText } = req.body;
+
+    // Validate required fields
+    if (!ReservationNo || !Action) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: ReservationNo and Action are required'
+      });
+    }
+
+    // Build Process_Data object
+    const processData = {
+      Action: Action, // "ConfirmBooking" or "CancelBooking"
+      ReservationNo: ReservationNo,
+      Inventory_Mode: InventoryMode || "ALLOCATED",
+      Error_Text: ErrorText || ""
+    };
+
+    // Create form data for POST request
+    const formData = new URLSearchParams();
+    formData.append('request_type', 'ProcessBooking');
+    formData.append('HotelCode', HOTEL_CODE);
+    formData.append('APIKey', API_KEY);
+    formData.append('Process_Data', JSON.stringify(processData));
+
+    console.log('\n========================================');
+    console.log('=== PROCESSING BOOKING ===');
+    console.log('========================================');
+    console.log('[Action]:', Action);
+    console.log('[ReservationNo]:', ReservationNo);
+    console.log('[Process Data]:', JSON.stringify(processData, null, 2));
+    console.log('========================================\n');
+
+    // Make POST request to eZee ProcessBooking API
+    const response = await axios.post(EZEE_API_BASE_URL, formData, {
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    console.log('\n========================================');
+    console.log('=== EZEE PROCESS BOOKING RESPONSE ===');
+    console.log('========================================');
+    console.log('[Response Status]:', response.status);
+    console.log('[Response Data]:');
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log('========================================\n');
+
+    // Check if processing was successful
+    if (response.data.Status === "Success" || response.data.success) {
+      return res.status(200).json({
+        success: true,
+        message: `Booking ${Action === "ConfirmBooking" ? "confirmed" : "cancelled"} successfully`,
+        data: response.data
+      });
+    }
+
+    // Handle error responses
+    if (response.data.error || response.data.Error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking processing failed',
+        error: response.data.error || response.data.Error
+      });
+    }
+
+    // Unknown response
+    return res.status(400).json({
+      success: false,
+      message: 'Unexpected response from booking processing',
+      data: response.data
+    });
+
+  } catch (error) {
+    console.error('Error processing booking:', error.response?.data || error.message);
+    
+    return res.status(error.response?.status || 500).json({
+      success: false,
+      message: 'Failed to process booking',
+      error: error.response?.data || error.message
+    });
+  }
+};
+
+/**
  * Get configured payment gateways
  * GET /api/booking/payment-gateways
  */
@@ -372,18 +505,31 @@ export const getPaymentGateways = async (req, res) => {
 
     // Check if data is array
     if (Array.isArray(response.data) && response.data.length > 0) {
-      console.log(`Found ${response.data.length} payment gateways`);
-      return res.status(200).json({
-        success: true,
-        data: response.data
-      });
+      // Filter to only include Razorpay gateways (case-insensitive)
+      const razorpayGateways = response.data.filter(gateway => 
+        gateway.paymenttype && gateway.paymenttype.toLowerCase().includes('razorpay')
+      );
+      
+      if (razorpayGateways.length > 0) {
+        console.log(`Found ${razorpayGateways.length} Razorpay gateway(s)`);
+        return res.status(200).json({
+          success: true,
+          data: razorpayGateways
+        });
+      } else {
+        console.log('No Razorpay gateways found');
+        return res.status(200).json({
+          success: true,
+          data: [],
+          message: 'No Razorpay gateway configured'
+        });
+      }
     } else {
-      // No payment gateways configured, return Pay at Hotel as default
-      console.log('No payment gateways found - will use Pay at Hotel only');
+      console.log('No payment gateways found');
       return res.status(200).json({
         success: true,
         data: [],
-        message: 'No payment gateways configured - Pay at Hotel available'
+        message: 'No payment gateways configured'
       });
     }
 

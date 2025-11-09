@@ -12,7 +12,6 @@ import videoRoutes from './routes/videoRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import heroImageRoutes from './routes/heroImageRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
-import razorpayRoutes from './routes/razorpayRoutes.js';
 
 // Load env vars
 dotenv.config();
@@ -69,7 +68,6 @@ app.use('/api/careers', careerRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/booking', bookingRoutes);
-app.use('/api/payment', razorpayRoutes);
 
 
 
