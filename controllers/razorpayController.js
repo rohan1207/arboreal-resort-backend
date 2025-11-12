@@ -156,12 +156,10 @@ export const verifyRazorpayPayment = async (req, res) => {
     console.log('[eZee Response]:', JSON.stringify(ezeeResponse.data, null, 2));
     console.log('========================================\n');
 
-    const data = ezeeResponse.data || {};
-    const msg = String(data.message || data.Error || '').toLowerCase();
-    const ezeeOk = data.Status === "Success" || data.success || msg.includes('already confirm') || msg.includes('already confirmed');
-
-    if (ezeeOk) {
+    // Check if eZee confirmation was successful
+    if (ezeeResponse.data.Status === "Success" || ezeeResponse.data.success) {
       console.log('✅ Booking confirmed successfully in eZee dashboard');
+      
       return res.status(200).json({
         success: true,
         message: 'Payment successful and booking confirmed',
@@ -170,18 +168,19 @@ export const verifyRazorpayPayment = async (req, res) => {
         reservationNo: reservationNo,
         ezeeConfirmed: true
       });
+    } else {
+      console.error('❌ eZee booking confirmation failed:', ezeeResponse.data);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Payment successful but booking confirmation failed',
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        reservationNo: reservationNo,
+        ezeeConfirmed: false,
+        ezeeError: ezeeResponse.data.error || ezeeResponse.data.Error || 'Unknown error'
+      });
     }
-
-    console.error('❌ eZee booking confirmation failed:', data);
-    return res.status(200).json({
-      success: true,
-      message: 'Payment verified, booking status not updated in eZee',
-      paymentId: razorpay_payment_id,
-      orderId: razorpay_order_id,
-      reservationNo: reservationNo,
-      ezeeConfirmed: false,
-      ezeeError: data.error || data.Error || 'Unknown error'
-    });
 
   } catch (error) {
     console.error('Error verifying payment:', error.response?.data || error.message);

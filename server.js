@@ -1,13 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import mongoose from 'mongoose';
+// import mongoose from 'mongoose';
 
 import projectRoutes from './routes/projectRoutes.js';
 import { eventRoutes } from './routes/eventRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import careerRoutes from './routes/careerRoutes.js';
-import connectDB from './config/db.js';
+// import connectDB from './config/db.js';
 import videoRoutes from './routes/videoRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import heroImageRoutes from './routes/heroImageRoutes.js';
@@ -17,7 +17,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 dotenv.config();
 
 // Connect to MongoDB
-connectDB();
+// connectDB();
 
 const app = express();
 
