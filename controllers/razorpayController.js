@@ -10,8 +10,9 @@ const razorpay = new Razorpay({
 
 // eZee API Configuration
 const EZEE_API_BASE_URL = 'https://live.ipms247.com/booking/reservation_api/listing.php';
-const HOTEL_CODE = process.env.EZEE_HOTEL_CODE;
-const API_KEY = process.env.EZEE_API_KEY;
+// Use env vars if provided, otherwise fall back to the same credentials used in bookingController.js
+const HOTEL_CODE = process.env.EZEE_HOTEL_CODE || '49890';
+const API_KEY = process.env.EZEE_API_KEY || '012892983818a824a6-e3aa-11ef-a';
 
 /**
  * Create Razorpay Order
@@ -157,7 +158,15 @@ export const verifyRazorpayPayment = async (req, res) => {
     console.log('========================================\n');
 
     // Check if eZee confirmation was successful
-    if (ezeeResponse.data.Status === "Success" || ezeeResponse.data.success) {
+    // eZee docs show: { "result": "success", "message": "Booking Processed Succesfully" }
+    const ezeeData = ezeeResponse.data || {};
+    const isSuccess =
+      ezeeData.Status === "Success" ||
+      ezeeData.success === true ||
+      (typeof ezeeData.result === "string" &&
+        ezeeData.result.toLowerCase() === "success");
+
+    if (isSuccess) {
       console.log('✅ Booking confirmed successfully in eZee dashboard');
       
       return res.status(200).json({
@@ -168,19 +177,24 @@ export const verifyRazorpayPayment = async (req, res) => {
         reservationNo: reservationNo,
         ezeeConfirmed: true
       });
-    } else {
-      console.error('❌ eZee booking confirmation failed:', ezeeResponse.data);
-      
-      return res.status(400).json({
-        success: false,
-        message: 'Payment successful but booking confirmation failed',
-        paymentId: razorpay_payment_id,
-        orderId: razorpay_order_id,
-        reservationNo: reservationNo,
-        ezeeConfirmed: false,
-        ezeeError: ezeeResponse.data.error || ezeeResponse.data.Error || 'Unknown error'
-      });
     }
+
+    console.error('❌ eZee booking confirmation failed:', ezeeResponse.data);
+
+    return res.status(400).json({
+      success: false,
+      message: 'Payment successful but booking confirmation failed',
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      reservationNo: reservationNo,
+      ezeeConfirmed: false,
+      ezeeError:
+        ezeeData.error ||
+        ezeeData.Error ||
+        ezeeData.Errors ||
+        ezeeData.message ||
+        'Unknown error'
+    });
 
   } catch (error) {
     console.error('Error verifying payment:', error.response?.data || error.message);

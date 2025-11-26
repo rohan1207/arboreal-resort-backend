@@ -21,8 +21,8 @@ async function testRoomList() {
       request_type: 'RoomList',
       HotelCode: HOTEL_CODE,
       APIKey: API_KEY,
-      check_in_date: '2025-11-15',
-      check_out_date: '2025-11-16',
+      check_in_date: '2026-05-05',
+      check_out_date: '2026-05-06',
       number_adults: '2',
       number_children: '0',
       num_rooms: '1',
@@ -42,8 +42,8 @@ async function testRoomList() {
     console.log('Method: GET');
     console.log('Request Type: RoomList');
     console.log('Hotel Code:', HOTEL_CODE);
-    console.log('Check-in: 2025-11-15');
-    console.log('Check-out: 2025-11-16');
+    console.log('Check-in: 2026-05-05');
+    console.log('Check-out: 2026-05-06');
     console.log('\n[Making API Call...]');
 
     const response = await axios.get(apiUrl, {

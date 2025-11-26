@@ -436,11 +436,18 @@ export const processBooking = async (req, res) => {
     console.log('========================================\n');
 
     // Check if processing was successful
-    if (response.data.Status === "Success" || response.data.success) {
+    const data = response.data || {};
+    const isSuccess =
+      data.Status === "Success" ||
+      data.success === true ||
+      (typeof data.result === "string" &&
+        data.result.toLowerCase() === "success");
+
+    if (isSuccess) {
       return res.status(200).json({
         success: true,
         message: `Booking ${Action === "ConfirmBooking" ? "confirmed" : "cancelled"} successfully`,
-        data: response.data
+        data
       });
     }
 
