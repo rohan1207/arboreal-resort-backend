@@ -126,3 +126,5 @@ export const updateInquiry = async (req, res) => {
 };
 
 
+
+

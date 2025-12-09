@@ -15,3 +15,5 @@ router.put('/:id', updateInquiry);
 export default router;
 
 
+
+
