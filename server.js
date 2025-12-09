@@ -7,17 +7,18 @@ import projectRoutes from './routes/projectRoutes.js';
 import { eventRoutes } from './routes/eventRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import careerRoutes from './routes/careerRoutes.js';
-// import connectDB from './config/db.js';
+import connectDB from './config/db.js';
 import videoRoutes from './routes/videoRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import heroImageRoutes from './routes/heroImageRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import inquiryRoutes from './routes/inquiryRoutes.js';
 
 // Load env vars
 dotenv.config();
 
 // Connect to MongoDB
-// connectDB();
+connectDB();
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use('/api/careers', careerRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/booking', bookingRoutes);
+app.use('/api/inquiries', inquiryRoutes);
 
 
 

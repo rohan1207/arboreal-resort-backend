@@ -14,6 +14,15 @@ const EZEE_API_BASE_URL = 'https://live.ipms247.com/booking/reservation_api/list
 const HOTEL_CODE = process.env.EZEE_HOTEL_CODE || '49890';
 const API_KEY = process.env.EZEE_API_KEY || '012892983818a824a6-e3aa-11ef-a';
 
+// eZee Kiosk/AddPayment configuration
+// Docs: AddPayment via https://live.ipms247.com/index.php/page/service.kioskconnectivity
+const EZEE_KIOSK_URL = 'https://live.ipms247.com/index.php/page/service.kioskconnectivity';
+const KIOSK_HOTEL_CODE = process.env.EZEE_KIOSK_HOTEL_CODE || HOTEL_CODE;
+const KIOSK_AUTH_CODE = process.env.EZEE_KIOSK_AUTH_CODE;
+// These should be provided by eZee (PaymentID for Razorpay and CurrencyID for INR)
+const KIOSK_PAYMENT_ID = process.env.EZEE_KIOSK_PAYMENT_ID;
+const KIOSK_CURRENCY_ID = process.env.EZEE_KIOSK_CURRENCY_ID;
+
 /**
  * Create Razorpay Order
  * POST /api/booking/razorpay/create-order
@@ -78,7 +87,7 @@ export const createRazorpayOrder = async (req, res) => {
 /**
  * Verify Razorpay Payment and Confirm Booking with eZee
  * POST /api/booking/razorpay/verify-payment
- * Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature, reservationNo }
+ * Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature, reservationNo, amount }
  */
 export const verifyRazorpayPayment = async (req, res) => {
   try {
@@ -86,7 +95,8 @@ export const verifyRazorpayPayment = async (req, res) => {
       razorpay_order_id, 
       razorpay_payment_id, 
       razorpay_signature,
-      reservationNo 
+      reservationNo,
+      amount,
     } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -109,6 +119,7 @@ export const verifyRazorpayPayment = async (req, res) => {
     console.log('[Order ID]:', razorpay_order_id);
     console.log('[Payment ID]:', razorpay_payment_id);
     console.log('[Reservation No]:', reservationNo);
+    console.log('[Amount]:', amount);
     console.log('========================================\n');
 
     // Verify signature
@@ -128,9 +139,16 @@ export const verifyRazorpayPayment = async (req, res) => {
     console.log('✅ Payment signature verified successfully');
 
     // STEP 2: Confirm booking with eZee ProcessBooking API
+    // IMPORTANT: ProcessBooking (ConfirmBooking) should trigger the confirmation email
+    // The email should reflect Booking_Payment_Mode: "3" that was set during InsertBooking
+    // Note: As per eZee support, Booking_Payment_Mode: "3" in CreateBooking API is sufficient
+    // No need to use AddPayment API - eZee will handle payment status based on Booking_Payment_Mode
     console.log('\n========================================');
-    console.log('=== CONFIRMING BOOKING WITH EZEE ===');
+    console.log('=== CONFIRMING BOOKING WITH EZEE (ProcessBooking) ===');
     console.log('========================================');
+    console.log('[Note]: This should trigger confirmation email with correct payment status');
+    console.log('[Note]: Booking_Payment_Mode: "3" was set during InsertBooking');
+    console.log('========================================\n');
 
     const processData = {
       Action: "ConfirmBooking",
@@ -168,14 +186,15 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     if (isSuccess) {
       console.log('✅ Booking confirmed successfully in eZee dashboard');
-      
+      console.log('✅ Payment status should be reflected via Booking_Payment_Mode: "3" (as per eZee support)');
+
       return res.status(200).json({
         success: true,
         message: 'Payment successful and booking confirmed',
         paymentId: razorpay_payment_id,
         orderId: razorpay_order_id,
         reservationNo: reservationNo,
-        ezeeConfirmed: true
+        ezeeConfirmed: true,
       });
     }
 
