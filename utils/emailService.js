@@ -32,7 +32,8 @@ export const sendInquiryEmail = async (inquiryData) => {
 
     const mailOptions = {
       from: `"The Arboreal Resort" <${process.env.SMTP_USER}>`,
-      to: 'reservations@thearborealresort.com',
+      // to: 'reservations@thearborealresort.com',
+      to: 'rohanambhore721@gmail.com',
       subject: `New Inquiry from ${name} - ${formatDate(checkIn)}`,
       html: `
         <!DOCTYPE html>
@@ -132,6 +133,7 @@ export const sendInquiryEmail = async (inquiryData) => {
     throw error;
   }
 };
+
 
 
 

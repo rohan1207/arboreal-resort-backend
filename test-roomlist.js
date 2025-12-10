@@ -16,20 +16,31 @@ async function testRoomList() {
     console.log('FETCHING ROOM LIST FROM EZEE API');
     console.log('========================================\n');
 
-    // Build query parameters
+    // Build query parameters - Testing with dates from screenshot
+    const checkIn = '2026-01-20';
+    const checkOut = '2026-01-21';
+    const requestedRooms = 1;
+    const requestedAdults = 3;
+    const requestedChildren = 1;
+    
+    // Test: Search with 1 room, per-room average (like the backend does now)
+    const numRooms = '1';
+    const numAdults = Math.ceil(requestedAdults / requestedRooms).toString(); // 2
+    const numChildren = Math.ceil(requestedChildren / requestedRooms).toString(); // 1
+    
     const queryParams = new URLSearchParams({
       request_type: 'RoomList',
       HotelCode: HOTEL_CODE,
       APIKey: API_KEY,
-      check_in_date: '2026-01-07',
-      check_out_date: '2026-01-08',
-      number_adults: '2',
-      number_children: '2',
-      num_rooms: '1',
+      check_in_date: checkIn,
+      check_out_date: checkOut,
+      number_adults: numAdults,
+      number_children: numChildren,
+      num_rooms: numRooms,
       promotion_code: '',
       property_configuration_info: '0',
       showtax: '0',
-      show_only_available_rooms: '1',
+      show_only_available_rooms: '0', // Try with 0 to see all rooms
       language: 'en',
       roomtypeunkid: '',
       packagefor: 'DESKTOP',
@@ -42,8 +53,12 @@ async function testRoomList() {
     console.log('Method: GET');
     console.log('Request Type: RoomList');
     console.log('Hotel Code:', HOTEL_CODE);
-    console.log('Check-in: 2026-05-05');
-    console.log('Check-out: 2026-05-06');
+    console.log('Check-in:', checkIn);
+    console.log('Check-out:', checkOut);
+    console.log('Rooms:', numRooms);
+    console.log('Adults:', numAdults);
+    console.log('Children:', numChildren);
+    console.log('\nFull URL:', apiUrl);
     console.log('\n[Making API Call...]');
 
     const response = await axios.get(apiUrl, {

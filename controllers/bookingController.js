@@ -22,15 +22,33 @@ export const searchRooms = async (req, res) => {
     }
 
     // Build query parameters for Ezee API
+    // IMPORTANT: eZee API seems to validate total guests against single room capacity
+    // So for multiple rooms, we search with 1 room to get all available room types
+    // Then users can select multiple rooms in the cart
+    // This matches how the old website likely works
+    const numRooms = parseInt(rooms, 10);
+    const totalAdults = parseInt(adults, 10);
+    const totalChildren = parseInt(children || 0, 10);
+    
+    // For multiple rooms, search with 1 room using per-room averages
+    // This allows us to see all available room types, then user selects multiple in cart
+    const searchRooms = numRooms > 1 ? 1 : numRooms;
+    
+    // Calculate per-room average for the API call (eZee validates against single room)
+    // Using Math.ceil to ensure we don't under-estimate (e.g., 7 adults / 3 rooms = 3 adults per room)
+    const adultsPerRoom = Math.ceil(totalAdults / numRooms);
+    const childrenPerRoom = Math.ceil(totalChildren / numRooms);
+    
     const queryParams = new URLSearchParams({
       request_type: 'RoomList',
       HotelCode: HOTEL_CODE,
       APIKey: API_KEY,
       check_in_date: checkIn,
       check_out_date: checkOut,
-      number_adults: adults,
-      number_children: children || 0,
-      num_rooms: rooms,
+      // Note: Do NOT send num_nights when sending check_out_date (causes InvalidSearchCriteria error)
+      number_adults: adultsPerRoom.toString(),
+      number_children: childrenPerRoom.toString(),
+      num_rooms: searchRooms.toString(), // Search with 1 room to get all available types
       promotion_code: '',
       property_configuration_info: '0',
       showtax: '0',
@@ -40,6 +58,22 @@ export const searchRooms = async (req, res) => {
       packagefor: 'DESKTOP',
       promotionfor: 'DESKTOP'
     });
+    
+    console.log('\n========================================');
+    console.log('=== ROOM SEARCH REQUEST ===');
+    console.log('========================================');
+    console.log(`[User Request]: ${numRooms} room(s), ${totalAdults} adults, ${totalChildren} children`);
+    if (numRooms > 1) {
+      console.log(`[Strategy]: Multi-room search - using per-room averages`);
+      console.log(`[Per-Room Average]: ${(totalAdults/numRooms).toFixed(2)} adults, ${(totalChildren/numRooms).toFixed(2)} children`);
+      console.log(`[eZee API Call]: ${searchRooms} room(s), ${adultsPerRoom} adults, ${childrenPerRoom} children`);
+      console.log(`[Why]: eZee validates total guests against single room capacity.`);
+      console.log(`      Searching with 1 room shows all available room types.`);
+      console.log(`      User will then select ${numRooms} rooms in the cart.`);
+    } else {
+      console.log(`[eZee API Call]: ${searchRooms} room(s), ${adultsPerRoom} adults, ${childrenPerRoom} children`);
+    }
+    console.log('========================================\n');
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
     console.log('Searching rooms with URL:', apiUrl);
@@ -49,10 +83,88 @@ export const searchRooms = async (req, res) => {
       timeout: 30000 // 30 second timeout
     });
 
+    // Log the raw response for debugging
+    console.log('=== eZee API Raw Response ===');
+    console.log('Response Type:', typeof response.data);
+    console.log('Is Array:', Array.isArray(response.data));
+    console.log('Response Data:', JSON.stringify(response.data, null, 2));
+    console.log('Response Status:', response.status);
+
+    // eZee API can return:
+    // 1. An array of rooms (success)
+    // 2. An error object with Errors property
+    // 3. An empty array [] (no rooms available, but valid response)
+    
+    // Check if eZee returned an error object
+    if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+      if (response.data.Errors || response.data.error || response.data.Error) {
+        const errorMessage = response.data.Errors?.ErrorMessage || 
+                            response.data.error || 
+                            response.data.Error || 
+                            'No rooms available';
+        
+        console.log('⚠️ eZee API Error:', errorMessage);
+        
+        return res.status(200).json({
+          success: true,
+          data: [], // Return empty array when there's an error
+          Errors: {
+            ErrorMessage: errorMessage
+          },
+          searchParams: {
+            checkIn,
+            checkOut,
+            rooms,
+            adults,
+            children
+          }
+        });
+      }
+    }
+
+    // Handle array response (successful - can be empty array or array of rooms)
+    let roomData = Array.isArray(response.data) ? response.data : [];
+    
+    // Check if array contains error objects (eZee sometimes returns errors as array items)
+    if (roomData.length > 0 && roomData[0] && roomData[0]['Error Details']) {
+      const errorDetails = roomData[0]['Error Details'];
+      const errorMessage = errorDetails.Error_Message || 'No rooms available';
+      const errorCode = errorDetails.Error_Code;
+      
+      console.log(`⚠️ eZee API Error in array: Code ${errorCode}, Message: ${errorMessage}`);
+      
+      return res.status(200).json({
+        success: true,
+        data: [], // Return empty array when there's an error
+        Errors: {
+          ErrorMessage: errorMessage,
+          ErrorCode: errorCode
+        },
+        searchParams: {
+          checkIn,
+          checkOut,
+          rooms,
+          adults,
+          children
+        }
+      });
+    }
+    
+    // Filter out any error objects and keep only valid room objects
+    roomData = roomData.filter(item => {
+      // Valid room should have roomtypeunkid or Room_Name
+      return item && (item.roomtypeunkid || item.Room_Name || item.Roomtype_Name) && !item['Error Details'];
+    });
+    
+    console.log(`✅ eZee API Success: Found ${roomData.length} room(s)`);
+    if (roomData.length > 0) {
+      console.log('Room names:', roomData.map(r => r.Room_Name || r.Roomtype_Name).join(', '));
+    }
+    
     // Return the response from Ezee API
     return res.status(200).json({
       success: true,
-      data: response.data, // This will be the array of rooms
+      data: roomData,
       searchParams: {
         checkIn,
         checkOut,
