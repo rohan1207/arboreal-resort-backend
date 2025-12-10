@@ -47,11 +47,6 @@ app.use(cors(corsOptions));
 
 // Add global request logging middleware
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/projects')) {
-    console.log(`[SERVER] ${req.method} ${req.path} - Request hit server`);
-    console.log('[SERVER] Request body size:', req.get('Content-Length') || 'Unknown');
-    console.log('[SERVER] User-Agent:', req.get('User-Agent'));
-  }
   next();
 });
 
@@ -84,4 +79,4 @@ app.get("/ping", (req, res) => {
 
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {});

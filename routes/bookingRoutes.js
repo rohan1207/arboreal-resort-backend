@@ -8,7 +8,7 @@ import {
   calculateExtraCharge,
   getPaymentGateways
 } from '../controllers/bookingController.js';
-import { createRazorpayOrder, verifyRazorpayPayment } from '../controllers/razorpayController.js';
+import { createRazorpayOrder, verifyRazorpayPayment, refundRazorpayPayment, testRefundNotificationEmail } from '../controllers/razorpayController.js';
 
 const router = express.Router();
 
@@ -36,5 +36,9 @@ router.get('/payment-gateways', getPaymentGateways);
 // Razorpay payment integration
 router.post('/razorpay/create-order', createRazorpayOrder);
 router.post('/razorpay/verify-payment', verifyRazorpayPayment);
+router.post('/razorpay/refund', refundRazorpayPayment);
+
+// Test endpoint for refund notification email (for development/testing)
+router.post('/razorpay/test-refund-email', testRefundNotificationEmail);
 
 export default router;

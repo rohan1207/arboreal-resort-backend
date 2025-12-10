@@ -17,11 +17,11 @@ async function testRoomList() {
     console.log('========================================\n');
 
     // Build query parameters - Testing with dates from screenshot
-    const checkIn = '2026-01-20';
-    const checkOut = '2026-01-21';
+    const checkIn = '2025-12-31';
+    const checkOut = '2026-01-01';
     const requestedRooms = 1;
-    const requestedAdults = 3;
-    const requestedChildren = 1;
+    const requestedAdults = 2;
+    const requestedChildren = 0;
     
     // Test: Search with 1 room, per-room average (like the backend does now)
     const numRooms = '1';

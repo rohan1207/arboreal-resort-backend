@@ -58,37 +58,13 @@ export const searchRooms = async (req, res) => {
       packagefor: 'DESKTOP',
       promotionfor: 'DESKTOP'
     });
-    
-    console.log('\n========================================');
-    console.log('=== ROOM SEARCH REQUEST ===');
-    console.log('========================================');
-    console.log(`[User Request]: ${numRooms} room(s), ${totalAdults} adults, ${totalChildren} children`);
-    if (numRooms > 1) {
-      console.log(`[Strategy]: Multi-room search - using per-room averages`);
-      console.log(`[Per-Room Average]: ${(totalAdults/numRooms).toFixed(2)} adults, ${(totalChildren/numRooms).toFixed(2)} children`);
-      console.log(`[eZee API Call]: ${searchRooms} room(s), ${adultsPerRoom} adults, ${childrenPerRoom} children`);
-      console.log(`[Why]: eZee validates total guests against single room capacity.`);
-      console.log(`      Searching with 1 room shows all available room types.`);
-      console.log(`      User will then select ${numRooms} rooms in the cart.`);
-    } else {
-      console.log(`[eZee API Call]: ${searchRooms} room(s), ${adultsPerRoom} adults, ${childrenPerRoom} children`);
-    }
-    console.log('========================================\n');
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
-    console.log('Searching rooms with URL:', apiUrl);
 
     // Make request to Ezee API
     const response = await axios.get(apiUrl, {
       timeout: 30000 // 30 second timeout
     });
-
-    // Log the raw response for debugging
-    console.log('=== eZee API Raw Response ===');
-    console.log('Response Type:', typeof response.data);
-    console.log('Is Array:', Array.isArray(response.data));
-    console.log('Response Data:', JSON.stringify(response.data, null, 2));
-    console.log('Response Status:', response.status);
 
     // eZee API can return:
     // 1. An array of rooms (success)
@@ -102,8 +78,6 @@ export const searchRooms = async (req, res) => {
                             response.data.error || 
                             response.data.Error || 
                             'No rooms available';
-        
-        console.log('⚠️ eZee API Error:', errorMessage);
         
         return res.status(200).json({
           success: true,
@@ -131,8 +105,6 @@ export const searchRooms = async (req, res) => {
       const errorMessage = errorDetails.Error_Message || 'No rooms available';
       const errorCode = errorDetails.Error_Code;
       
-      console.log(`⚠️ eZee API Error in array: Code ${errorCode}, Message: ${errorMessage}`);
-      
       return res.status(200).json({
         success: true,
         data: [], // Return empty array when there's an error
@@ -155,11 +127,6 @@ export const searchRooms = async (req, res) => {
       // Valid room should have roomtypeunkid or Room_Name
       return item && (item.roomtypeunkid || item.Room_Name || item.Roomtype_Name) && !item['Error Details'];
     });
-    
-    console.log(`✅ eZee API Success: Found ${roomData.length} room(s)`);
-    if (roomData.length > 0) {
-      console.log('Room names:', roomData.map(r => r.Room_Name || r.Roomtype_Name).join(', '));
-    }
     
     // Return the response from Ezee API
     return res.status(200).json({
@@ -238,14 +205,6 @@ export const createBooking = async (req, res) => {
     formData.append('HotelCode', HOTEL_CODE);
     formData.append('APIKey', API_KEY);
     formData.append('BookingData', bookingDataJson);
-    
-    console.log('\n========================================');
-    console.log('=== CREATING BOOKING WITH EZEE API ===');
-    console.log('========================================');
-    console.log('[Booking Data Received]:', JSON.stringify(bookingData, null, 2));
-    console.log('\n[Form Data Being Sent]:');
-    console.log(formData.toString().substring(0, 500) + '...\n');
-    console.log('========================================\n');
 
     // Make POST request to Ezee InsertBooking API with form data
     const response = await axios.post(EZEE_API_BASE_URL, formData, {
@@ -254,15 +213,6 @@ export const createBooking = async (req, res) => {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
-
-    console.log('\n========================================');
-    console.log('=== EZEE API RESPONSE ===');
-    console.log('========================================');
-    console.log('[Response Status]:', response.status);
-    console.log('[Response Headers]:', JSON.stringify(response.headers, null, 2));
-    console.log('[Response Data]:');
-    console.log(JSON.stringify(response.data, null, 2));
-    console.log('========================================\n');
 
     // Check if booking was successful
     if (response.data.ReservationNo) {
@@ -280,14 +230,10 @@ export const createBooking = async (req, res) => {
     // Handle error array format (most common from eZee API)
     if (Array.isArray(response.data) && response.data.length > 0) {
       const firstError = response.data[0];
-      console.error('\n[Ezee API Error - Array Format]');
-      console.error('Full error array:', JSON.stringify(response.data, null, 2));
       
       // Check for nested "Error Details" object
       if (firstError["Error Details"]) {
         const errorDetails = firstError["Error Details"];
-        console.error('Error Code:', errorDetails.Error_Code);
-        console.error('Error Message:', errorDetails.Error_Message);
         
         return res.status(400).json({
           success: false,
@@ -318,8 +264,6 @@ export const createBooking = async (req, res) => {
     // Handle Error_Details object format
     if (response.data.Error_Details || response.data["Error Details"]) {
       const errorDetails = response.data.Error_Details || response.data["Error Details"];
-      console.error('\n[Ezee API Error - Object Format]');
-      console.error('Error Details:', JSON.stringify(errorDetails, null, 2));
       
       return res.status(400).json({
         success: false,
@@ -332,7 +276,6 @@ export const createBooking = async (req, res) => {
     // Handle other error formats
     if (response.data.error || response.data.Error) {
       const errorMsg = response.data.error || response.data.Error || 'Unknown error from booking system';
-      console.error('\n[Ezee API Error - String Format]:', errorMsg);
       
       return res.status(400).json({
         success: false,
@@ -342,9 +285,6 @@ export const createBooking = async (req, res) => {
     }
     
     // Unknown format
-    console.error('\n[Ezee API - Unexpected Response Format]');
-    console.error('Response data:', JSON.stringify(response.data, null, 2));
-    
     return res.status(400).json({
       success: false,
       message: 'Booking failed - unexpected response format',
@@ -376,14 +316,10 @@ export const getExtraCharges = async (req, res) => {
     });
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
-    console.log('=== Fetching Extra Charges ===');
-    console.log('API URL:', apiUrl);
 
     const response = await axios.get(apiUrl, {
       timeout: 30000
     });
-
-    console.log('Extra Charges API Response:', JSON.stringify(response.data, null, 2));
 
     // Check for error responses
     if (response.data.error || response.data.Error || response.data === -1) {
@@ -397,14 +333,12 @@ export const getExtraCharges = async (req, res) => {
 
     // Check if data is array
     if (Array.isArray(response.data) && response.data.length > 0) {
-      console.log(`Found ${response.data.length} extra charges`);
       return res.status(200).json({
         success: true,
         data: response.data
       });
     } else {
       // No extra charges available
-      console.log('No extra charges found - empty array or no data');
       return res.status(200).json({
         success: true,
         data: [],
@@ -451,13 +385,10 @@ export const calculateExtraCharge = async (req, res) => {
     });
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
-    console.log('Calculating extra charges...');
 
     const response = await axios.get(apiUrl, {
       timeout: 30000
     });
-
-    console.log('Calculate Extra Charges Response:', response.data);
 
     if (response.data.TotalCharge !== undefined) {
       return res.status(200).json({
@@ -523,14 +454,6 @@ export const processBooking = async (req, res) => {
     formData.append('APIKey', API_KEY);
     formData.append('Process_Data', JSON.stringify(processData));
 
-    console.log('\n========================================');
-    console.log('=== PROCESSING BOOKING ===');
-    console.log('========================================');
-    console.log('[Action]:', Action);
-    console.log('[ReservationNo]:', ReservationNo);
-    console.log('[Process Data]:', JSON.stringify(processData, null, 2));
-    console.log('========================================\n');
-
     // Make POST request to eZee ProcessBooking API
     const response = await axios.post(EZEE_API_BASE_URL, formData, {
       timeout: 30000,
@@ -538,14 +461,6 @@ export const processBooking = async (req, res) => {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
-
-    console.log('\n========================================');
-    console.log('=== EZEE PROCESS BOOKING RESPONSE ===');
-    console.log('========================================');
-    console.log('[Response Status]:', response.status);
-    console.log('[Response Data]:');
-    console.log(JSON.stringify(response.data, null, 2));
-    console.log('========================================\n');
 
     // Check if processing was successful
     const data = response.data || {};
@@ -603,14 +518,10 @@ export const getPaymentGateways = async (req, res) => {
     });
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
-    console.log('=== Fetching Payment Gateways ===');
-    console.log('API URL:', apiUrl);
 
     const response = await axios.get(apiUrl, {
       timeout: 30000
     });
-
-    console.log('Payment Gateways API Response:', JSON.stringify(response.data, null, 2));
 
     // Check for error responses
     if (response.data.error || response.data.Error || response.data === -1) {
@@ -630,7 +541,6 @@ export const getPaymentGateways = async (req, res) => {
       );
       
       if (razorpayGateways.length > 0) {
-        console.log(`Found ${razorpayGateways.length} Razorpay gateway(s)`);
         return res.status(200).json({
           success: true,
           data: razorpayGateways
@@ -644,7 +554,6 @@ export const getPaymentGateways = async (req, res) => {
         });
       }
     } else {
-      console.log('No payment gateways found');
       return res.status(200).json({
         success: true,
         data: [],
