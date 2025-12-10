@@ -1,14 +1,22 @@
 import nodemailer from 'nodemailer';
 
-// Create reusable transporter
+// Create reusable transporter with SSL (port 465) for better reliability on Render
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false, // true for 465, false for other ports
+  port: parseInt(process.env.SMTP_PORT) || 465, // Use 465 for SSL (more reliable from cloud platforms)
+  secure: true, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER, // Your email
     pass: process.env.SMTP_PASS, // Your app password
   },
+  // Connection timeout settings to prevent ETIMEDOUT errors
+  connectionTimeout: 20000, // 20 seconds
+  greetingTimeout: 20000, // 20 seconds
+  socketTimeout: 20000, // 20 seconds
+  // Connection pooling for better reliability
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 3,
 });
 
 /**

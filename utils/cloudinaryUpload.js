@@ -7,7 +7,7 @@ import sharp from 'sharp';
  * @param {string} folder - Cloudinary folder to store the file in.
  * @returns {Promise<string>} The uploaded image URL.
  */
-export const uploadBufferToCloudinary = async (file, folder = 'Aagaur/projects') => {
+export const uploadBufferToCloudinary = async (file, folder = '') => {
   let bufferToUpload = file.buffer;
   // Compress if image larger than 9 MB to stay under Cloudinary free plan 10 MB limit
   // Compress all images larger than ~1 MB to speed up upload and reduce Cloudinary timeouts
