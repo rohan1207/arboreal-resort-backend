@@ -327,7 +327,7 @@ export const testRefundNotificationEmail = async (req, res) => {
           reason: 'Booking creation failed: Room inventory not available - Manual refund required',
           guestName: 'testing rohan Ambhore',
           guestEmail: 'rohanambhore7@gmail.com',
-          guestPhone: '8855817434',
+          guestPhone: '97678 55988',
           bookingDetails: {
             checkIn: '2025-12-17',
             checkOut: '2025-12-18',

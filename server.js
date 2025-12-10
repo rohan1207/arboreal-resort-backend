@@ -30,6 +30,7 @@ const corsOptions = {
     'http://localhost:5175',
     process.env.CLIENT_URL || 'https://arboreal-new.onrender.com',
     'https://thearborealresort.onrender.com',
+    'https://thearborealresort.com'
     'https://admin.aagaurstudio.com', 
     'https://www.aagaurstudio.com','https://aagaurstudio.com',// Main frontend on Render
     'https://aagaur-admin.onrender.com', // Admin panel on Render
