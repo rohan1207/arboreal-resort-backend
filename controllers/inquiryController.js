@@ -44,7 +44,6 @@ export const createInquiry = async (req, res) => {
         adults: savedInquiry.adults,
         children: savedInquiry.children
       });
-      console.log('Inquiry email sent successfully');
     } catch (emailError) {
       console.error('Failed to send inquiry email:', emailError);
       // Don't fail the request if email fails

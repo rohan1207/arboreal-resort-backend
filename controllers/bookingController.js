@@ -546,7 +546,6 @@ export const getPaymentGateways = async (req, res) => {
           data: razorpayGateways
         });
       } else {
-        console.log('No Razorpay gateways found');
         return res.status(200).json({
           success: true,
           data: [],

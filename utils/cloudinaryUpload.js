@@ -18,7 +18,6 @@ export const uploadBufferToCloudinary = async (file, folder = 'Aagaur/projects')
         .resize({ width: 1920 })
         .jpeg({ quality: 80 })
         .toBuffer();
-      console.log(`[COMPRESSION] Compressed ${file.originalname} from ${(file.size / 1e6).toFixed(1)}MB to ${(bufferToUpload.length / 1e6).toFixed(1)}MB`);
     } catch (err) {
       console.error('[COMPRESSION] Failed, uploading original buffer', err.message);
     }
