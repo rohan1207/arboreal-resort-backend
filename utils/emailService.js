@@ -1,23 +1,46 @@
 import nodemailer from 'nodemailer';
 
-// Create reusable transporter with SSL (port 465) for better reliability on Render
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 465, // Use 465 for SSL (more reliable from cloud platforms)
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER, // Your email
-    pass: process.env.SMTP_PASS, // Your app password
-  },
-  // Connection timeout settings to prevent ETIMEDOUT errors
-  connectionTimeout: 20000, // 20 seconds
-  greetingTimeout: 20000, // 20 seconds
-  socketTimeout: 20000, // 20 seconds
-  // Connection pooling for better reliability
-  pool: true,
-  maxConnections: 1,
-  maxMessages: 3,
-});
+// Create reusable transporter
+// Supports both Gmail SMTP and SendGrid SMTP (better for cloud platforms like Render)
+// Use SENDGRID_API_KEY environment variable to enable SendGrid, otherwise uses Gmail SMTP
+const createTransporter = () => {
+  // If SendGrid API key is provided, use SendGrid SMTP (recommended for Render)
+  if (process.env.SENDGRID_API_KEY) {
+    console.log('📧 Using SendGrid SMTP service');
+    return nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false, // TLS
+      auth: {
+        user: 'apikey', // SendGrid requires 'apikey' as username
+        pass: process.env.SENDGRID_API_KEY, // Your SendGrid API key
+      },
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 20000,
+    });
+  }
+  
+  // Fallback to Gmail SMTP (for local development)
+  console.log('📧 Using Gmail SMTP service');
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 465,
+    secure: parseInt(process.env.SMTP_PORT) === 465, // true for 465, false for 587
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 3,
+  });
+};
+
+const transporter = createTransporter();
 
 /**
  * Send inquiry notification email
@@ -38,8 +61,11 @@ export const sendInquiryEmail = async (inquiryData) => {
     // Calculate nights
     const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
 
+    // Use verified sender email (SendGrid requires verified sender, Gmail uses SMTP_USER)
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || process.env.SMTP_USER || 'thearboreal@gmail.com';
+
     const mailOptions = {
-      from: `"The Arboreal Resort" <${process.env.SMTP_USER}>`,
+      from: `"The Arboreal Resort" <${fromEmail}>`,
       to: 'reservations@thearborealresort.com',
       // to: 'rohanambhore721@gmail.com',
       subject: `New Inquiry from ${name} - ${formatDate(checkIn)}`,
@@ -169,8 +195,11 @@ export const sendRefundNotificationEmail = async (refundData) => {
     const refundAmount = amount ? (amount / 100).toFixed(2) : '0.00';
     const isManualRefund = !refundId;
 
+    // Use verified sender email (SendGrid requires verified sender, Gmail uses SMTP_USER)
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || process.env.SMTP_USER || 'thearboreal@gmail.com';
+    
     const mailOptions = {
-      from: `"The Arboreal Resort" <${process.env.SMTP_USER}>`,
+      from: `"The Arboreal Resort" <${fromEmail}>`,
       to: 'reservations@thearborealresort.com',
       subject: `⚠️ ${isManualRefund ? 'REFUND REQUIRED' : 'REFUND INITIATED'} - Payment ID: ${paymentId?.substring(0, 12)}...`,
       html: `
