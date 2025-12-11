@@ -4,9 +4,14 @@ import nodemailer from 'nodemailer';
 // Supports both Gmail SMTP and SendGrid SMTP (better for cloud platforms like Render)
 // Use SENDGRID_API_KEY environment variable to enable SendGrid, otherwise uses Gmail SMTP
 const createTransporter = () => {
+  // Debug: Check if SendGrid API key exists
+  console.log('🔍 Checking email service configuration...');
+  console.log('SENDGRID_API_KEY exists:', !!process.env.SENDGRID_API_KEY);
+  console.log('SENDGRID_API_KEY length:', process.env.SENDGRID_API_KEY?.length || 0);
+  
   // If SendGrid API key is provided, use SendGrid SMTP (recommended for Render)
   if (process.env.SENDGRID_API_KEY) {
-    console.log('📧 Using SendGrid SMTP service');
+    console.log('✅ Using SendGrid SMTP service');
     return nodemailer.createTransport({
       host: 'smtp.sendgrid.net',
       port: 587,
@@ -22,7 +27,7 @@ const createTransporter = () => {
   }
   
   // Fallback to Gmail SMTP (for local development)
-  console.log('📧 Using Gmail SMTP service');
+  console.log('⚠️ Using Gmail SMTP service (SendGrid API key not found)');
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT) || 465,
