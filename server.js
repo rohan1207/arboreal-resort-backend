@@ -49,7 +49,10 @@ const corsOptions = {
     'https://thearborealresort.com',
     'https://admin.aagaurstudio.com', 
     'https://www.aagaurstudio.com','https://aagaurstudio.com',// Main frontend on Render
-    'https://aagaur-admin.onrender.com', // Admin panel on Render
+    'https://aagaur-admin.onrender.com',
+    'http://admin.thearborealresort.com',
+    'https://admin.thearborealresort.com',
+     // Admin panel on Render
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
