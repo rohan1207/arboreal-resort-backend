@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 
 async function uploadHeroVideo() {
   try {
-    const videoPath = path.join(__dirname, '../../arboreal-new-frontend/public/hero4.mp4');
+    const videoPath = path.join(__dirname, '../../arboreal-new-frontend/public/YOUTUBE.mp4');
     
     console.log('📹 Uploading hero video to Cloudinary...');
     console.log('Video path:', videoPath);
@@ -35,4 +35,18 @@ async function uploadHeroVideo() {
 }
 
 uploadHeroVideo();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

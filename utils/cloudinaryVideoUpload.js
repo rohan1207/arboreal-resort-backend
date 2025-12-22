@@ -28,33 +28,13 @@ export const uploadVideoToCloudinary = async (filePath, folder = 'Arboreal/hero'
         use_filename: true,
         unique_filename: false,
         overwrite: false,
-        // High quality optimized versions (not too compressed)
-        eager: [
-          // Desktop version - high quality
-          { 
-            quality: 'auto:good',
-            width: 1920, 
-            format: 'mp4'
-          },
-          // Mobile version - good quality
-          { 
-            quality: 'auto:good',
-            width: 1280, 
-            format: 'mp4'
-          },
-          // WebM version - high quality
-          { 
-            quality: 'auto:good', 
-            width: 1920, 
-            format: 'webm'
-          }
-        ],
-        eager_async: true,
-        // Note: streaming_profile cannot be used with eager transformations
-        // Removed streaming_profile to avoid conflict
-        // Removed bit_rate - Cloudinary will auto-calculate based on quality settings
-        video_codec: 'auto',
-        audio_codec: 'aac',
+        // Upload original video only.
+        // IMPORTANT: Do not request any transformations during upload for large files,
+        // otherwise Cloudinary may try to process them synchronously and fail with
+        // "Video is too large to process synchronously" errors.
+        //
+        // We keep transformation work purely in the *delivery* URLs below so that
+        // Cloudinary can generate and cache derivatives lazily when first requested.
       },
       (error, result) => {
         if (error) {

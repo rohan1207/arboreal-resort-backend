@@ -54,3 +54,17 @@ async function uploadSliderImages() {
 
 uploadSliderImages();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

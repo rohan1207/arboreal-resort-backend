@@ -9,17 +9,29 @@ import sharp from 'sharp';
  */
 export const uploadBufferToCloudinary = async (file, folder = '') => {
   let bufferToUpload = file.buffer;
-  // Compress if image larger than 9 MB to stay under Cloudinary free plan 10 MB limit
-  // Compress all images larger than ~1 MB to speed up upload and reduce Cloudinary timeouts
-  if (file.mimetype.startsWith('image/') && file.size > 1 * 1024 * 1024) {
+  // Only compress if image is very large (>5MB) to maintain quality
+  // For blog images, we want to keep them clear unless they're too large
+  if (file.mimetype.startsWith('image/') && file.size > 5 * 1024 * 1024) {
+    try {
+      // For very large images, compress but maintain good quality
+      bufferToUpload = await sharp(file.buffer)
+        .rotate()
+        .resize({ width: 1920, withoutEnlargement: true })
+        .jpeg({ quality: 85, progressive: true })
+        .toBuffer();
+      console.log(`[COMPRESSION] Compressed large image from ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    } catch (err) {
+      console.error('[COMPRESSION] Failed, uploading original buffer', err.message);
+    }
+  } else if (file.mimetype.startsWith('image/') && file.size > 1 * 1024 * 1024) {
+    // For medium images (1-5MB), only optimize format, don't compress much
     try {
       bufferToUpload = await sharp(file.buffer)
         .rotate()
-        .resize({ width: 1920 })
-        .jpeg({ quality: 80 })
+        .jpeg({ quality: 92, progressive: true })
         .toBuffer();
     } catch (err) {
-      console.error('[COMPRESSION] Failed, uploading original buffer', err.message);
+      console.error('[OPTIMIZATION] Failed, uploading original buffer', err.message);
     }
   }
 

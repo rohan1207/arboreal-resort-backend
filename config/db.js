@@ -7,15 +7,14 @@ const connectDB = async () => {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
     
-    const conn = await mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const conn = await mongoose.connect(uri);
+    
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error connecting to MongoDB: ${error.message}`);
+    console.error(`❌ Error connecting to MongoDB: ${error.message}`);
     // Don't exit process - allow server to run even if DB connection fails
     // This ensures eZee API flow continues to work
-    console.error('Server will continue running, but inquiry tracking will be disabled');
+    console.error('⚠️  Server will continue running, but inquiry tracking will be disabled');
   }
 };
 
