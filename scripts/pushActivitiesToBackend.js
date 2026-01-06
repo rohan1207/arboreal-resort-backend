@@ -169,3 +169,19 @@ const pushActivitiesToBackend = async () => {
 
 pushActivitiesToBackend();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
