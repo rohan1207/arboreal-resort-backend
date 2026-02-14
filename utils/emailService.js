@@ -1,12 +1,17 @@
-import sgMail from '@sendgrid/mail';
+import { Resend } from 'resend';
 
-// Initialize SendGrid with API key
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log('✅ SendGrid initialized with API key');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+if (process.env.RESEND_API_KEY) {
+  console.log('✅ Resend initialized with API key');
 } else {
-  console.error('❌ SENDGRID_API_KEY not found! Emails will fail.');
+  console.error('❌ RESEND_API_KEY not found! Emails will fail.');
 }
+
+const getFromEmail = () =>
+  process.env.RESEND_FROM_EMAIL || 'noreply@thearborealresort.com';
+
+const RESERVATIONS_EMAIL = 'reservations@thearborealresort.com';
 
 /**
  * Send inquiry notification email
@@ -14,8 +19,7 @@ if (process.env.SENDGRID_API_KEY) {
 export const sendInquiryEmail = async (inquiryData) => {
   try {
     const { name, phone, email, checkIn, checkOut, rooms, adults, children } = inquiryData;
-    
-    // Format dates
+
     const formatDate = (date) => {
       return new Date(date).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -24,11 +28,8 @@ export const sendInquiryEmail = async (inquiryData) => {
       });
     };
 
-    // Calculate nights
     const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
-
-    // Use verified sender email (SendGrid requires verified sender)
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@thearborealresort.com';
+    const fromEmail = getFromEmail();
 
     const htmlContent = `
         <!DOCTYPE html>
@@ -120,17 +121,20 @@ export const sendInquiryEmail = async (inquiryData) => {
         Please contact the guest at your earliest convenience.
       `;
 
-    // Use SendGrid's native API (HTTP, no SMTP connection issues)
-    const msg = {
-      to: 'reservations@thearborealresort.com',
+    const { data, error } = await resend.emails.send({
       from: `"The Arboreal Resort" <${fromEmail}>`,
+      to: [RESERVATIONS_EMAIL],
       subject: `New Inquiry from ${name} - ${formatDate(checkIn)}`,
       html: htmlContent,
-      text: textContent,
-    };
+      text: textContent
+    });
 
-    const [response] = await sgMail.send(msg);
-    return { success: true, messageId: response.headers['x-message-id'] || 'sent' };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    return { success: true, messageId: data?.id || 'sent' };
   } catch (error) {
     console.error('Error sending inquiry email:', error);
     throw error;
@@ -142,17 +146,17 @@ export const sendInquiryEmail = async (inquiryData) => {
  */
 export const sendRefundNotificationEmail = async (refundData) => {
   try {
-    const { 
-      paymentId, 
-      refundId, 
-      amount, 
-      reason, 
-      guestName, 
-      guestEmail, 
+    const {
+      paymentId,
+      refundId,
+      amount,
+      reason,
+      guestName,
+      guestEmail,
       guestPhone,
-      bookingDetails 
+      bookingDetails
     } = refundData;
-    
+
     const formatDate = (date) => {
       if (!date) return 'N/A';
       return new Date(date).toLocaleDateString('en-US', {
@@ -164,10 +168,8 @@ export const sendRefundNotificationEmail = async (refundData) => {
 
     const refundAmount = amount ? (amount / 100).toFixed(2) : '0.00';
     const isManualRefund = !refundId;
+    const fromEmail = getFromEmail();
 
-    // Use verified sender email (SendGrid requires verified sender)
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@thearborealresort.com';
-    
     const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -297,24 +299,22 @@ export const sendRefundNotificationEmail = async (refundData) => {
         ${isManualRefund ? 'ACTION REQUIRED: Please initiate refund via Razorpay dashboard.' : 'Please verify refund status in Razorpay dashboard.'}
       `;
 
-    // Use SendGrid's native API (HTTP, no SMTP connection issues)
-    const msg = {
-      to: 'reservations@thearborealresort.com',
+    const { data, error } = await resend.emails.send({
       from: `"The Arboreal Resort" <${fromEmail}>`,
+      to: [RESERVATIONS_EMAIL],
       subject: `⚠️ ${isManualRefund ? 'REFUND REQUIRED' : 'REFUND INITIATED'} - Payment ID: ${paymentId?.substring(0, 12)}...`,
       html: htmlContent,
-      text: textContent,
-    };
+      text: textContent
+    });
 
-    const [response] = await sgMail.send(msg);
-    return { success: true, messageId: response.headers['x-message-id'] || 'sent' };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    return { success: true, messageId: data?.id || 'sent' };
   } catch (error) {
     console.error('Error sending refund notification email:', error);
     throw error;
   }
 };
-
-
-
-
-
