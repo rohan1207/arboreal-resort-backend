@@ -3,9 +3,9 @@ import fs from 'fs';
 
 // Direct Cloudinary credentials
 cloudinary.config({
-  cloud_name: 'dxevy8mea',
-  api_key: '276168121575332',
-  api_secret: 'rZ-D_WKPKQkV1Gv7foNWS7DYp-w'
+  cloud_name: 'ddfuu6bop',
+  api_key: 'daYpxdvUO57iyIvyZh3swpDsIQw',
+  api_secret: '417893748926271'
 });
 
 /**
@@ -42,7 +42,7 @@ export const uploadVideoToCloudinary = async (filePath, folder = 'Arboreal/hero'
         }
         
         const publicId = result.public_id;
-        const cloudName = 'dxevy8mea'; // Direct cloud name
+        const cloudName = 'ddfuu6bop'; // Direct cloud name
         const baseUrl = `https://res.cloudinary.com/${cloudName}/video/upload`;
         
         // Build high-quality optimized URLs

@@ -8,3 +8,4 @@ router.get('/', getPublicGallerySettings);
 
 export default router;
 
+

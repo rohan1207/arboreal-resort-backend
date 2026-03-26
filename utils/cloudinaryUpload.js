@@ -1,5 +1,53 @@
 import { cloudinary } from '../config/cloudinary.js';
 import sharp from 'sharp';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import crypto from 'crypto';
+
+const STORAGE_PROVIDER = (process.env.STORAGE_PROVIDER || 'cloudinary').toLowerCase();
+
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || '';
+const R2_PUBLIC_BASE_URL = (process.env.R2_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+
+const hasR2Config =
+  !!R2_ACCOUNT_ID &&
+  !!R2_ACCESS_KEY_ID &&
+  !!R2_SECRET_ACCESS_KEY &&
+  !!R2_BUCKET_NAME &&
+  !!R2_PUBLIC_BASE_URL;
+
+const r2Client = hasR2Config
+  ? new S3Client({
+      region: 'auto',
+      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY,
+      },
+    })
+  : null;
+
+const sanitizePath = (value = '') =>
+  String(value)
+    .trim()
+    .replace(/^\/+|\/+$/g, '')
+    .replace(/[^a-zA-Z0-9/_-]/g, '');
+
+const inferExtension = (mimetype = '', originalname = '') => {
+  const fromOriginal = (originalname.split('.').pop() || '').toLowerCase();
+  if (fromOriginal && fromOriginal.length <= 5) return `.${fromOriginal}`;
+  if (mimetype.includes('jpeg')) return '.jpg';
+  if (mimetype.includes('png')) return '.png';
+  if (mimetype.includes('webp')) return '.webp';
+  if (mimetype.includes('gif')) return '.gif';
+  if (mimetype.includes('svg')) return '.svg';
+  if (mimetype.includes('mp4')) return '.mp4';
+  if (mimetype.includes('webm')) return '.webm';
+  if (mimetype.includes('quicktime')) return '.mov';
+  return '';
+};
 
 /**
  * Upload a file buffer to Cloudinary using an upload_stream, returning the secure URL.
@@ -35,15 +83,39 @@ export const uploadBufferToCloudinary = async (file, folder = '') => {
     }
   }
 
+  if (STORAGE_PROVIDER === 'r2') {
+    if (!hasR2Config || !r2Client) {
+      throw new Error(
+        'R2 storage selected but configuration is incomplete. Please set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL.'
+      );
+    }
+
+    const folderPath = sanitizePath(folder);
+    const filenameBase = `${Date.now()}-${crypto.randomUUID()}`;
+    const ext = inferExtension(file.mimetype, file.originalname);
+    const key = folderPath ? `${folderPath}/${filenameBase}${ext}` : `${filenameBase}${ext}`;
+
+    await r2Client.send(
+      new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+        Body: bufferToUpload,
+        ContentType: file.mimetype || 'application/octet-stream',
+      })
+    );
+
+    return `${R2_PUBLIC_BASE_URL}/${key}`;
+  }
+
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: 'auto',
-        use_filename: false,      // let Cloudinary generate a unique ID
-        unique_filename: true,    // guarantee uniqueness even if original names repeat (e.g. 'file')
-        timeout: 600000,        // 10-minute timeout per upload to prevent Cloudinary 499 errors
-        overwrite: false,         // do NOT overwrite previously uploaded files
+        use_filename: false,
+        unique_filename: true,
+        timeout: 600000,
+        overwrite: false,
       },
       (error, result) => {
         if (error) return reject(error);

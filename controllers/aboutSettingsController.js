@@ -28,6 +28,25 @@ export const updateAboutSettings = async (req, res) => {
 
     const { cards, testimonials } = req.body;
 
+    try {
+      const filesArray = Array.isArray(req.files) ? req.files : [];
+      console.log('[ABOUT SETTINGS][ADMIN] updateAboutSettings called', {
+        bodyKeys: Object.keys(req.body || {}),
+        hasCardsField: !!cards,
+        hasTestimonialsField: !!testimonials,
+        filesCount: filesArray.length,
+        fileFieldnames: filesArray.map((f) => f.fieldname),
+        fileSummaries: filesArray.map((f) => ({
+          fieldname: f.fieldname,
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+          size: f.size,
+        })),
+      });
+    } catch (logErr) {
+      console.error('[ABOUT SETTINGS][ADMIN] Failed to log initial debug info:', logErr.message);
+    }
+
     // Update cards text content
     if (cards) {
       try {
@@ -70,7 +89,8 @@ export const updateAboutSettings = async (req, res) => {
     }
 
     // Handle card images upload (card1Image, card2Image)
-    if (req.files) {
+    // Note: multer.any() returns files as an array, not an object
+    if (req.files && Array.isArray(req.files)) {
       const ensureCards = () => {
         if (!settings.cards || settings.cards.length < 2) {
           while (settings.cards.length < 2) {
@@ -85,9 +105,15 @@ export const updateAboutSettings = async (req, res) => {
         }
       };
 
-      if (req.files.card1Image && req.files.card1Image[0]) {
+      // Find card1Image file by fieldname
+      const card1File = req.files.find(f => f.fieldname === 'card1Image');
+      if (card1File) {
+        console.log('[ABOUT CARD 1][ADMIN] File received', {
+          originalname: card1File.originalname,
+          mimetype: card1File.mimetype,
+          size: card1File.size,
+        });
         ensureCards();
-        const file = req.files.card1Image[0];
         if (settings.cards[0].imageUrl) {
           try {
             await deleteByUrl(settings.cards[0].imageUrl);
@@ -95,13 +121,22 @@ export const updateAboutSettings = async (req, res) => {
             console.error('[ABOUT CARD 1] Failed to delete old image:', err.message);
           }
         }
-        const url = await uploadBufferToCloudinary(file, 'Arboreal/about/cards');
+        const url = await uploadBufferToCloudinary(card1File, 'Arboreal/about/cards');
+        console.log('[ABOUT CARD 1][ADMIN] Uploaded new image to Cloudinary', { url });
         settings.cards[0].imageUrl = url;
+      } else {
+        console.log('[ABOUT CARD 1][ADMIN] No card1Image file found in req.files');
       }
 
-      if (req.files.card2Image && req.files.card2Image[0]) {
+      // Find card2Image file by fieldname
+      const card2File = req.files.find(f => f.fieldname === 'card2Image');
+      if (card2File) {
+        console.log('[ABOUT CARD 2][ADMIN] File received', {
+          originalname: card2File.originalname,
+          mimetype: card2File.mimetype,
+          size: card2File.size,
+        });
         ensureCards();
-        const file = req.files.card2Image[0];
         if (settings.cards[1].imageUrl) {
           try {
             await deleteByUrl(settings.cards[1].imageUrl);
@@ -109,47 +144,53 @@ export const updateAboutSettings = async (req, res) => {
             console.error('[ABOUT CARD 2] Failed to delete old image:', err.message);
           }
         }
-        const url = await uploadBufferToCloudinary(file, 'Arboreal/about/cards');
+        const url = await uploadBufferToCloudinary(card2File, 'Arboreal/about/cards');
+        console.log('[ABOUT CARD 2][ADMIN] Uploaded new image to Cloudinary', { url });
         settings.cards[1].imageUrl = url;
+      } else {
+        console.log('[ABOUT CARD 2][ADMIN] No card2Image file found in req.files');
       }
 
       // Testimonial avatar images: testimonialImage_0, testimonialImage_1, etc.
-      if (req.files && Object.keys(req.files).length > 0) {
-        for (const fieldName of Object.keys(req.files)) {
-          if (fieldName.startsWith('testimonialImage_')) {
-            const indexStr = fieldName.split('_')[1];
-            const idx = parseInt(indexStr, 10);
-            if (!Number.isNaN(idx)) {
-              if (!settings.testimonials || settings.testimonials.length <= idx) {
-                // Ensure array length
-                while (settings.testimonials.length <= idx) {
-                  settings.testimonials.push({
-                    name: '',
-                    text: '',
-                    rating: 5,
-                    imageUrl: '',
-                    order: settings.testimonials.length,
-                    isActive: true,
-                  });
-                }
+      for (const file of req.files) {
+        if (file.fieldname && file.fieldname.startsWith('testimonialImage_')) {
+          const indexStr = file.fieldname.split('_')[1];
+          const idx = parseInt(indexStr, 10);
+          if (!Number.isNaN(idx)) {
+            if (!settings.testimonials || settings.testimonials.length <= idx) {
+              // Ensure array length
+              while (settings.testimonials.length <= idx) {
+                settings.testimonials.push({
+                  name: '',
+                  text: '',
+                  rating: 5,
+                  imageUrl: '',
+                  order: settings.testimonials.length,
+                  isActive: true,
+                });
               }
-              const file = req.files[fieldName][0];
-              if (settings.testimonials[idx].imageUrl) {
-                try {
-                  await deleteByUrl(settings.testimonials[idx].imageUrl);
-                } catch (err) {
-                  console.error(
-                    `[ABOUT TESTIMONIAL ${idx}] Failed to delete old image:`,
-                    err.message
-                  );
-                }
-              }
-              const url = await uploadBufferToCloudinary(
-                file,
-                'Arboreal/about/testimonials'
-              );
-              settings.testimonials[idx].imageUrl = url;
             }
+            if (settings.testimonials[idx].imageUrl) {
+              try {
+                await deleteByUrl(settings.testimonials[idx].imageUrl);
+              } catch (err) {
+                console.error(
+                  `[ABOUT TESTIMONIAL ${idx}] Failed to delete old image:`,
+                  err.message
+                );
+              }
+            }
+            const url = await uploadBufferToCloudinary(
+              file,
+              'Arboreal/about/testimonials'
+            );
+            console.log(`[ABOUT TESTIMONIAL][ADMIN] Uploaded avatar for index ${idx}`, {
+              url,
+              originalname: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+            });
+            settings.testimonials[idx].imageUrl = url;
           }
         }
       }

@@ -1,4 +1,5 @@
 import ContactSettings from '../models/ContactSettings.js';
+import { sendContactFormEmail } from '../utils/emailService.js';
 
 // @desc    Get contact settings
 // @route   GET /api/admin/contact
@@ -75,6 +76,49 @@ export const updateContactSettings = async (req, res) => {
   }
 };
 
+// @desc    Submit contact form (sends email to reservations)
+// @route   POST /api/contact/send
+// @access  Public
+export const submitContactForm = async (req, res) => {
+  try {
+    const { name, email, phone, subject, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, email, and message are required'
+      });
+    }
+
+    try {
+      await sendContactFormEmail({
+        name: name.trim(),
+        email: email.trim(),
+        phone: (phone || '').trim(),
+        subject: (subject || 'Contact form submission').trim(),
+        message: message.trim()
+      });
+    } catch (emailError) {
+      console.error('[CONTACT FORM] Failed to send email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send your message. Please try again or contact us directly.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Your message has been sent successfully.'
+    });
+  } catch (error) {
+    console.error('[CONTACT FORM] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Something went wrong. Please try again.'
+    });
+  }
+};
+
 // @desc    Get contact settings (public)
 // @route   GET /api/contact
 // @access  Public
@@ -91,7 +135,9 @@ export const getPublicContactSettings = async (req, res) => {
         email: settings.email,
         workingHours: settings.workingHours,
         whatsappNumber: settings.whatsappNumber,
+        sendToWhatsApp: settings.sendToWhatsApp,
         formEnabled: settings.formEnabled,
+        whatsappMessageTemplate: settings.whatsappMessageTemplate,
       },
     });
   } catch (error) {

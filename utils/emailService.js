@@ -142,6 +142,102 @@ export const sendInquiryEmail = async (inquiryData) => {
 };
 
 /**
+ * Send contact form submission email to reservations
+ */
+export const sendContactFormEmail = async (contactData) => {
+  try {
+    const { name, email, phone, subject, message } = contactData;
+    const fromEmail = getFromEmail();
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #2a2a2a; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f9f9f9; padding: 20px; margin-top: 20px; }
+            .info-row { margin: 15px 0; padding: 10px; background-color: white; border-left: 4px solid #2a2a2a; }
+            .label { font-weight: bold; color: #2a2a2a; }
+            .message-box { margin: 15px 0; padding: 15px; background-color: white; border-left: 4px solid #2a2a2a; white-space: pre-wrap; }
+            .footer { margin-top: 20px; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>New Contact Form Message</h2>
+            </div>
+            <div class="content">
+              <p>Hello,</p>
+              <p>A new message has been received from the Contact Us form on your website.</p>
+              
+              <div class="info-row">
+                <span class="label">Name:</span> ${(name || '').replace(/</g, '&lt;')}
+              </div>
+              <div class="info-row">
+                <span class="label">Email:</span> ${(email || '').replace(/</g, '&lt;')}
+              </div>
+              <div class="info-row">
+                <span class="label">Phone:</span> ${(phone || 'Not provided').replace(/</g, '&lt;')}
+              </div>
+              <div class="info-row">
+                <span class="label">Subject:</span> ${(subject || '').replace(/</g, '&lt;')}
+              </div>
+              <div class="message-box">
+                <span class="label">Message:</span><br/>
+                ${(message || '').replace(/</g, '&lt;').replace(/\n/g, '<br/>')}
+              </div>
+              
+              <p style="margin-top: 30px;">
+                <strong>Please reply to the guest at your earliest convenience.</strong>
+              </p>
+            </div>
+            <div class="footer">
+              <p>This is an automated email from The Arboreal Resort website.</p>
+              <p>Generated on: ${new Date().toLocaleString('en-US')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+    const textContent = `
+New Contact Form Message
+
+Name: ${name || 'Not provided'}
+Email: ${email || 'Not provided'}
+Phone: ${phone || 'Not provided'}
+Subject: ${subject || 'Not provided'}
+
+Message:
+${message || ''}
+
+Please reply to the guest at your earliest convenience.
+      `.trim();
+
+    const { data, error } = await resend.emails.send({
+      from: `"The Arboreal Resort" <${fromEmail}>`,
+      to: [RESERVATIONS_EMAIL],
+      subject: `Contact form: ${(subject || 'No subject').substring(0, 50)}`,
+      html: htmlContent,
+      text: textContent
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    return { success: true, messageId: data?.id || 'sent' };
+  } catch (error) {
+    console.error('Error sending contact form email:', error);
+    throw error;
+  }
+};
+
+/**
  * Send refund notification email to reservation team (Compact & Nice Design)
  */
 export const sendRefundNotificationEmail = async (refundData) => {

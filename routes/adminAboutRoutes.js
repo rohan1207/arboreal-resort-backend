@@ -50,6 +50,26 @@ router.get('/', getAboutSettings);
 router.put(
   '/',
   upload.any(),
+  (req, res, next) => {
+    try {
+      const isArray = Array.isArray(req.files);
+      const files = isArray ? req.files : [];
+      console.log('[ABOUT ROUTE][ADMIN] PUT /api/admin/about received request', {
+        bodyKeys: Object.keys(req.body || {}),
+        filesCount: files.length,
+        fileFieldnames: files.map((f) => f.fieldname),
+        fileSummaries: files.map((f) => ({
+          fieldname: f.fieldname,
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+          size: f.size,
+        })),
+      });
+    } catch (logErr) {
+      console.error('[ABOUT ROUTE][ADMIN] Failed to log request debug info:', logErr.message);
+    }
+    next();
+  },
   handleMulterError,
   updateAboutSettings
 );
