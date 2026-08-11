@@ -1,9 +1,20 @@
 import axios from 'axios';
+import https from 'https';
 
 // Ezee API Configuration - Using the Listing API endpoint
 const EZEE_API_BASE_URL = 'https://live.ipms247.com/booking/reservation_api/listing.php';
-const HOTEL_CODE = '49890'; // Your hotel code
-const API_KEY = '012892983818a824a6-e3aa-11ef-a'; // Your API key
+const HOTEL_CODE = process.env.EZEE_HOTEL_CODE || '49890';
+const API_KEY = process.env.EZEE_API_KEY || '91243578294ceaac47-9172-11f1-8';
+
+// Some local Windows/antivirus SSL setups fail Node cert verification for eZee
+const ezeeHttpsAgent = new https.Agent({
+  rejectUnauthorized: process.env.EZEE_TLS_STRICT === 'true',
+});
+
+const ezeeAxiosConfig = {
+  timeout: 30000,
+  httpsAgent: ezeeHttpsAgent,
+};
 
 /**
  * Search for available rooms using Ezee Listing API
@@ -62,9 +73,7 @@ export const searchRooms = async (req, res) => {
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
 
     // Make request to Ezee API
-    const response = await axios.get(apiUrl, {
-      timeout: 30000 // 30 second timeout
-    });
+    const response = await axios.get(apiUrl, ezeeAxiosConfig);
 
     // eZee API can return:
     // 1. An array of rooms (success)
@@ -208,7 +217,7 @@ export const createBooking = async (req, res) => {
 
     // Make POST request to Ezee InsertBooking API with form data
     const response = await axios.post(EZEE_API_BASE_URL, formData, {
-      timeout: 30000, // 30 second timeout
+      ...ezeeAxiosConfig,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
@@ -317,9 +326,7 @@ export const getExtraCharges = async (req, res) => {
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
 
-    const response = await axios.get(apiUrl, {
-      timeout: 30000
-    });
+    const response = await axios.get(apiUrl, ezeeAxiosConfig);
 
     // Check for error responses
     if (response.data.error || response.data.Error || response.data === -1) {
@@ -386,9 +393,7 @@ export const calculateExtraCharge = async (req, res) => {
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
 
-    const response = await axios.get(apiUrl, {
-      timeout: 30000
-    });
+    const response = await axios.get(apiUrl, ezeeAxiosConfig);
 
     if (response.data.TotalCharge !== undefined) {
       return res.status(200).json({
@@ -456,7 +461,7 @@ export const processBooking = async (req, res) => {
 
     // Make POST request to eZee ProcessBooking API
     const response = await axios.post(EZEE_API_BASE_URL, formData, {
-      timeout: 30000,
+      ...ezeeAxiosConfig,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
@@ -519,9 +524,7 @@ export const getPaymentGateways = async (req, res) => {
 
     const apiUrl = `${EZEE_API_BASE_URL}?${queryParams.toString()}`;
 
-    const response = await axios.get(apiUrl, {
-      timeout: 30000
-    });
+    const response = await axios.get(apiUrl, ezeeAxiosConfig);
 
     // Check for error responses
     if (response.data.error || response.data.Error || response.data === -1) {

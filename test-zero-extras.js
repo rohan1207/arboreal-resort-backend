@@ -6,7 +6,7 @@ import axios from 'axios';
 
 const EZEE_API_BASE_URL = 'https://live.ipms247.com/booking/reservation_api/listing.php';
 const HOTEL_CODE = '49890';
-const API_KEY = '012892983818a824a6-e3aa-11ef-a';
+const API_KEY = '91243578294ceaac47-9172-11f1-8';
 
 async function testWithZeroExtras() {
   try {

@@ -1,8 +1,10 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-if (process.env.RESEND_API_KEY) {
+if (resend) {
   console.log('✅ Resend initialized with API key');
 } else {
   console.error('❌ RESEND_API_KEY not found! Emails will fail.');
@@ -10,6 +12,13 @@ if (process.env.RESEND_API_KEY) {
 
 const getFromEmail = () =>
   process.env.RESEND_FROM_EMAIL || 'noreply@thearborealresort.com';
+
+const sendEmail = async (payload) => {
+  if (!resend) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  return resend.emails.send(payload);
+};
 
 const RESERVATIONS_EMAIL = 'reservations@thearborealresort.com';
 
@@ -121,7 +130,7 @@ export const sendInquiryEmail = async (inquiryData) => {
         Please contact the guest at your earliest convenience.
       `;
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail({
       from: `"The Arboreal Resort" <${fromEmail}>`,
       to: [RESERVATIONS_EMAIL],
       subject: `New Inquiry from ${name} - ${formatDate(checkIn)}`,
@@ -217,7 +226,7 @@ ${message || ''}
 Please reply to the guest at your earliest convenience.
       `.trim();
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail({
       from: `"The Arboreal Resort" <${fromEmail}>`,
       to: [RESERVATIONS_EMAIL],
       subject: `Contact form: ${(subject || 'No subject').substring(0, 50)}`,
@@ -395,7 +404,7 @@ export const sendRefundNotificationEmail = async (refundData) => {
         ${isManualRefund ? 'ACTION REQUIRED: Please initiate refund via Razorpay dashboard.' : 'Please verify refund status in Razorpay dashboard.'}
       `;
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail({
       from: `"The Arboreal Resort" <${fromEmail}>`,
       to: [RESERVATIONS_EMAIL],
       subject: `⚠️ ${isManualRefund ? 'REFUND REQUIRED' : 'REFUND INITIATED'} - Payment ID: ${paymentId?.substring(0, 12)}...`,

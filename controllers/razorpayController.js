@@ -13,7 +13,7 @@ const razorpay = new Razorpay({
 const EZEE_API_BASE_URL = 'https://live.ipms247.com/booking/reservation_api/listing.php';
 // Use env vars if provided, otherwise fall back to the same credentials used in bookingController.js
 const HOTEL_CODE = process.env.EZEE_HOTEL_CODE || '49890';
-const API_KEY = process.env.EZEE_API_KEY || '012892983818a824a6-e3aa-11ef-a';
+const API_KEY = process.env.EZEE_API_KEY || '91243578294ceaac47-9172-11f1-8';
 
 // eZee Kiosk/AddPayment configuration
 // Docs: AddPayment via https://live.ipms247.com/index.php/page/service.kioskconnectivity
